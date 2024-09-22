@@ -6,6 +6,9 @@
 #define 	RW_PIN 				LATCbits.LATC1
 #define 	EN_PIN				LATCbits.LATC2
 #define 	SS					LATCbits.LATC6
+#define LCD_SIZE				0x14
+
+
 
 #define 	SIZE				0x08
 #define 	burstModeWrite		0x3F			
@@ -23,12 +26,14 @@
 #define DATE_INDEX				0x03
 #define SECOND_INDEX			0x00
 
-unsigned char clockValues[] = {0x00, 0x59, 0x23, 0x31, 0x12, 0x01, 0x24, 0x80}, trackValue = 0;    // initialization of each rtc register
+
+unsigned char clockValues[] = {0x00, 0x03, 0x15, 0x22, 0x09, 0x01, 0x24, 0x80}, trackValue = 0;    // initialization of each rtc register
 
 unsigned char clockReadValues[SIZE];
 
 
 unsigned char days[7][20] = {"SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"};	// array that contains days of week
+
 
 enum spiState
 {
@@ -54,6 +59,9 @@ void timerZero(void);
 void lcdDisplay(void);
 void displayDate(void);
 void displayTime(void);
+void clearFirstLine(void);
+void firstLine(void);
+void secondLine(void);
 
 #pragma interrupt myFunction
 void myFunction(void)
@@ -143,8 +151,7 @@ void lcdDisplay(void)
 		if(oldSecond != clockReadValues[SECOND_INDEX])				// DISPLAY DATA ONLY WHEN THE MINUTE CHANGES
 		{
 			oldSecond = clockReadValues[SECOND_INDEX];
-			LATD = 0x80;
-			command();	
+			clearFirstLine();
 			displayDate();								// UPDATE DATE
 			displayTime();			// UPDATE TIME
 		}
@@ -153,10 +160,12 @@ void lcdDisplay(void)
 
 void displayDate(void)
 {
-	unsigned char i = clockReadValues[DAY_INDEX], j = 0;
-	while(days[i-1][j] != '\0')
+	unsigned char i = clockReadValues[DAY_INDEX] - 0x01, j = 0;
+	if(i >= 7)
+		i = 0;
+	while(days[i][j] != '\0')
 	{
-		LATD = days[i-1][j++];
+		LATD = days[i][j++];
 		data();
 	}
 	LATD = 0x20;
@@ -186,10 +195,36 @@ void displayDate(void)
 	data();
 	LATD = (clockReadValues[YEAR_INDEX] & 0x0F) + 0x30;		
 	data();
+	secondLine();
+}
+
+void secondLine(void)
+{
 	LATD = 0xC0;				// jump second line
 	command();
 	busyFlag();
 }
+
+void clearFirstLine(void)
+{
+	unsigned char i = 0;
+	firstLine();
+	while(i < LCD_SIZE)
+	{
+		LATD = 0x20;
+		data();
+		++i;
+	}
+	firstLine();
+}
+
+void firstLine(void)
+{
+	LATD = 0x80;
+	command();	
+	busyFlag();
+}
+
 void displayTime(void)
 {
 	signed char i = 2, state = 0x00;
