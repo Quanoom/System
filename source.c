@@ -3,6 +3,9 @@
 
 #define TRUE 0x01
 #define FALSE 0x00
+#define numberDay 0x07
+#define stringLength 5
+
 
 #define 	RS_PIN				LATCbits.LATC0		// RS PIN CONNECTED TO RC0
 #define 	RW_PIN 				LATCbits.LATC1		// RW PIN CONNECTED TO RC1
@@ -15,9 +18,10 @@
 #define CONTROL_WRITE 0x0F							// CONTROL REGISTER USED TO DEFINED THE WP BIT
 #define SLAVE_SELECT LATCbits.LATC6					// SLAVE SELECT PIN IS CONNECTED TO RC6
 
-unsigned char bytes[] = {0x50, 0x59, 0x23, 0x29, 0x02, 0x07, 0x24, 0x00}, i = 0;	// THIS ARRAY SAVES THE VALUES OF RTC WHEN A READ OCCURS
-unsigned char days[7][20] = {"SUN,", "MON,", "TUE,", "WED,", "THU,", "FRI,", "SAT,"};	// THIS ARRAY CONTAINS ABBREVIATION OF DAYS NAME
-unsigned char doneReading = 0x00;
+volatile unsigned char bytes[] = {0x50, 0x59, 0x23, 0x29, 0x02, 0x07, 0x24, 0x00}, i = 0;	// THIS ARRAY SAVES THE VALUES OF RTC WHEN A READ OCCURS
+unsigned char daysInEnglish[numberDay][stringLength] = {"SUN ", "MON ", "TUE ", "WED ", "THU ", "FRI ", "SAT "};	// THIS ARRAY CONTAINS ABBREVIATION OF DAYS NAME
+unsigned char daysInFrensh[numberDay][stringLength] = {"DIM ", "LUN ", "MAR ", "MER ", "JEU ", "VEN " , "SAM "};
+volatile unsigned char changeLanguage = 0;
 
 
 enum state				// ENUMERATED TYPE TO SPECIFY THE STATE OF SPI
@@ -48,7 +52,12 @@ void clearSecondLine(void);
 #pragma interrupt interruptFunction
 void interruptFunction(void)
 {
-	if(PIR1bits.SSPIF)	
+	if(INTCONbits.INT0IF)
+	{
+		INTCONbits.INT0IF = 0;
+		changeLanguage = ~changeLanguage;
+	}
+	else if(PIR1bits.SSPIF)	
 	{
 		PIR1bits.SSPIF = 0;
 		if(spiState == WRITE)
@@ -109,7 +118,9 @@ void main(void)
 	SSPCON1 = 0x20;	
 	initialization();			// INITIALIZATION OF LCD(CLEAR HOME, CURSOR OFF, 5*7 PIXEL SIZE)
 	INTCONbits.GIE = 1;			// GLOBAL INTERRUPT ENABLE
-	INTCONbits.PEIE = 1;		// PERIPHERAL INTERRUPT ENABLE
+	INTCONbits.PEIE = 1;		// PERIPHERAL INTERRUPT ENABLE		
+	INTCONbits.INT0IE = 1;
+	INTCONbits.INT0IF = 0;
 	PIE1bits.SSPIE = 1;			// SPI INTERRUPT BIT
 	PIR1bits.SSPIF = 0;			// INTERRUPT FLAG  
 	SLAVE_SELECT = 0;			// PULL LOW THE SLAVE TO START COMMUNICATION
@@ -125,13 +136,7 @@ void home(unsigned char value)		// THIS FUNCTION IS USED TO CHANGE THE POSITION 
 void displayTime(void)				// THIS IS USED FOR DISPLAYING TIME 
 {
 	signed char m = 2;
-	unsigned char string[] = "TIME : ", j = 0;
-	home(0x80);
-	while(string[j] != '\0')
-	{
-		LATD = string[j++];
-		data();
-	}
+	home(0x84);
 	while(m >= 0)
 	{
 		LATD = 0x30 + ((bytes[m] & 0xF0) >> 4);		// EXTRACT THE HIGH BYTE TO DISPLAY IT
@@ -153,11 +158,22 @@ void displayDate(void)			// THIS FUNCTION DISPLAYS DATE : x/x/20x
 	if(m > 7)
 		m = 0;
 	home(0xC0);
-	for(; days[m][n] != '\0'; ++n)
+	if(!changeLanguage)
 	{
-		LATD = days[m][n];
-		data();
-	}	
+		for(; daysInEnglish[m][n] != '\0'; ++n)
+		{
+			LATD = daysInEnglish[m][n];
+			data();
+		}	
+	}
+	else
+	{
+		for(; daysInFrensh[m][n] != '\0'; ++n)
+		{
+			LATD = daysInFrensh[m][n];
+			data();
+		}
+	}
 	LATD = 0x30 + ((date & 0xF0) >> 4);
 	data();
 	LATD = 0x30 + (date & 0x0F);
