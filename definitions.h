@@ -58,5 +58,5 @@ void changeArrowPosition(void);
 void clearHome(void);
 void displayInformation(void);
 void displaySpace(void);
-
+void displayString(const unsigned char* string);
 #endif

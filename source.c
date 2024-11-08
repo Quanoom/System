@@ -153,16 +153,10 @@ void displayArrow(void)
 }
 void displayParameter(void)				// THE FUNCTION ROLE'S TO DISPLAY ALL THE SUPPORTED LANGUAGES BY THE SYSTEM
 {
-	unsigned char strings[3][16] = {"     LANGUAGE :", "      ENGLISH", "      FRENSH"}, i = 0, j = 0;
+	unsigned char strings[3][16] = {"     LANGUAGE :", "      ENGLISH", "      FRENSH"}, i = 0;
 	while(i < 3)
 	{
-		j = 0;
-		while(strings[i][j] != '\0')
-		{
-			LATD = strings[i][j];
-			data();
-			++j;
-		}
+		displayString(strings[i]);
 		if(i == 0)
 			home(0xC0);
 		else if(i == 1)
@@ -205,6 +199,15 @@ void displayTime(void)				// THIS IS USED FOR DISPLAYING TIME
 		--m;
 	}
 }
+void displayString(const unsigned char* string)
+{	
+	unsigned char i = 0;
+	for(; string[i] != '\0'; ++i)
+	{
+		LATD = string[i];
+		data();
+	}
+}
 void displayDate(void)			// THIS FUNCTION DISPLAYS DATE : x/x/20x
 {		
 	unsigned char m = (bytes[5] - 1), n = 0, date = bytes[3], month = bytes[4], year = bytes[6];
@@ -212,21 +215,9 @@ void displayDate(void)			// THIS FUNCTION DISPLAYS DATE : x/x/20x
 	if(m > 7)
 		m = 0;
 	if(!changePosition)
-	{
-		for(; daysInEnglish[m][n] != '\0'; ++n)
-		{
-			LATD = daysInEnglish[m][n];
-			data();
-		}	
-	}
+		displayString(daysInEnglish[m]);
 	else
-	{
-		for(; daysInFrensh[m][n] != '\0'; ++n)
-		{
-			LATD = daysInFrensh[m][n];
-			data();
-		}
-	}
+		displayString(daysInFrensh[m]);
 	LATD = 0x30 + ((date & 0xF0) >> 4);
 	data();
 	LATD = 0x30 + (date & 0x0F);
@@ -256,21 +247,9 @@ void displayInformation(void)			// THIS FUNCTION DISPLAYS INFORMATIONS
 	unsigned char inforEnglish[] = "DATE & TIME", i = 0, inforFrensh[] = "TEMPS & DATE";
 	home(0x84);
 	if(!changePosition)
-	{
-		while(inforEnglish[i] != '\0')
-		{
-			LATD = inforEnglish[i++];
-			data();	
-		}
-	}
+		displayString(inforEnglish);
 	else
-	{
-		while(inforFrensh[i] != '\0')
-		{
-			LATD = inforFrensh[i++];
-			data();	
-		}
-	}
+		displayString(inforFrensh);
 }
 void displayResult(void)
 {
