@@ -1,53 +1,6 @@
 #include <p18f452.h>
+#include "definitions.h"
 #pragma config WDT = OFF
-
-#define TRUE 0x01
-#define FALSE 0x00
-#define numberDay 0x07
-#define stringLength 5
-
-
-#define 	RS_PIN				LATCbits.LATC0		// RS PIN CONNECTED TO RC0
-#define 	RW_PIN 				LATCbits.LATC1		// RW PIN CONNECTED TO RC1
-#define 	EN_PIN				LATCbits.LATC2		// ENABLE PIN CONNECTED TO RC2
-
-
-#define CLOCK_BURST_WRITE 0x3F						// BURST MODE FOR WRITING
-#define CLOCK_BURST_READ 0xBF						// BURST MODE FOR READING
-#define DUMMY_DATA 	0x00							// DUMMY DATA 
-#define CONTROL_WRITE 0x0F							// CONTROL REGISTER USED TO DEFINED THE WP BIT
-#define SLAVE_SELECT LATCbits.LATC6					// SLAVE SELECT PIN IS CONNECTED TO RC6
-
-volatile unsigned char bytes[] = {0x50, 0x59, 0x23, 0x29, 0x02, 0x07, 0x24, 0x00}, i = 0;	// THIS ARRAY SAVES THE VALUES OF RTC WHEN A READ OCCURS
-unsigned char daysInEnglish[numberDay][stringLength] = {"SUN ", "MON ", "TUE ", "WED ", "THU ", "FRI ", "SAT "};	// THIS ARRAY CONTAINS ABBREVIATION OF DAYS NAME
-unsigned char daysInFrensh[numberDay][stringLength] = {"DIM ", "LUN ", "MAR ", "MER ", "JEU ", "VEN " , "SAM "};
-volatile unsigned char changeLanguage = 0;
-
-
-enum state				// ENUMERATED TYPE TO SPECIFY THE STATE OF SPI
-{
-	READ = 0, 			
-	WRITE = 1
-}spiState = WRITE;
-
-enum registers			// ENUMERATED TYPE TO SPECIFY EITHER SAVE MODE OR DUMMY MODE
-{
-	DUMMY,
-	SAVE
-}reg;
-
-void displayResult(void);
-void initialization(void);			
-void delay250ms(void);		
-void delay3us(void);			
-void command(void);
-void busyFlag(void);				
-void data(void);	
-void timerZero(void);
-void home(unsigned char value);
-void displayTime(void);
-void displayDate(void);
-void clearSecondLine(void);
 
 #pragma interrupt interruptFunction
 void interruptFunction(void)
@@ -55,46 +8,73 @@ void interruptFunction(void)
 	if(INTCONbits.INT0IF)
 	{
 		INTCONbits.INT0IF = 0;
-		changeLanguage = ~changeLanguage;
-	}
-	else if(PIR1bits.SSPIF)	
-	{
-		PIR1bits.SSPIF = 0;
-		if(spiState == WRITE)
+		if(!choose)	
 		{
-			if(i < 8)
-				SSPBUF = bytes[i++];
-			else
-			{
-				SLAVE_SELECT = 1;
-				spiState = READ;
-				reg = DUMMY;
-				SLAVE_SELECT = 0;
-				i = 0;
-				SSPBUF = CLOCK_BURST_READ;
-			}	
+			PIE1bits.SSPIE = 0;
+			SLAVE_SELECT = 1;
+			INTCON3bits.INT1IE = 1;
+			INTCON3bits.INT1IF = 0;
+			choose = 0x01;
+			clearHome();	
+			displayParameter();
 		}
 		else
 		{
-			if(reg == DUMMY)				// SEND DUMMY DATA
+			changePosition = ~changePosition;
+			changeArrowPosition();
+		}
+	}
+	else if(INTCON3bits.INT1IF)
+	{
+		INTCON3bits.INT1IF = 0;
+		INTCON3bits.INT1IE = 0;		
+		PIE1bits.SSPIE = 1;
+		clearHome();
+		choose = 0;
+		SLAVE_SELECT = 0;
+		SSPBUF = CLOCK_BURST_READ;
+	}	
+	else if(PIE1bits.SSPIE)
+	{
+		if(PIR1bits.SSPIF)	
+		{
+			PIR1bits.SSPIF = 0;
+			if(spiState == WRITE)
 			{
-				SSPBUF = DUMMY_DATA;
-				reg = SAVE;
-			}
-			else						// STORE THE RECEIVED DATA FROM MISO LINE
-			{
-				reg = DUMMY;
-				bytes[i++] = SSPBUF;	
 				if(i < 8)
-					PIR1bits.SSPIF = 1;		// TRIGGER A SOFTWARE SPI INTERRUPT 
+					SSPBUF = bytes[i++];
 				else
 				{
+					SLAVE_SELECT = 1;
+					spiState = READ;
 					reg = DUMMY;
-					SLAVE_SELECT = 1;		// DISCONNECTED THE SLAVE
-					displayResult();		// DISPLAY DATA INTO LCD
 					SLAVE_SELECT = 0;
-					SSPBUF = CLOCK_BURST_READ;	// INITIATE A BURST MODE READING 
 					i = 0;
+					SSPBUF = CLOCK_BURST_READ;
+				}	
+			}
+			else
+			{
+				if(reg == DUMMY)				// SEND DUMMY DATA
+				{
+					SSPBUF = DUMMY_DATA;
+					reg = SAVE;
+				}
+				else						// STORE THE RECEIVED DATA FROM MISO LINE
+				{
+					reg = DUMMY;
+					bytes[i++] = SSPBUF;	
+					if(i < 8)
+						PIR1bits.SSPIF = 1;		// TRIGGER A SOFTWARE SPI INTERRUPT 
+					else
+					{
+						reg = DUMMY;
+						SLAVE_SELECT = 1;		// DISCONNECTED THE SLAVE
+						displayResult();		// DISPLAY DATA INTO LCD
+						SLAVE_SELECT = 0;
+						SSPBUF = CLOCK_BURST_READ;	// INITIATE A BURST MODE READING 
+						i = 0;
+					}
 				}
 			}
 		}
@@ -123,9 +103,66 @@ void main(void)
 	INTCONbits.INT0IF = 0;
 	PIE1bits.SSPIE = 1;			// SPI INTERRUPT BIT
 	PIR1bits.SSPIF = 0;			// INTERRUPT FLAG  
-	SLAVE_SELECT = 0;			// PULL LOW THE SLAVE TO START COMMUNICATION
-	SSPBUF = CLOCK_BURST_WRITE;		// SEND A COMMAND FOR  BURST MODE FOR WRITING 
+	SLAVE_SELECT = 0;
+	SSPBUF = CLOCK_BURST_WRITE;
 	while(TRUE);					// KEEP LOOPING
+}
+void changeArrowPosition(void)
+{
+	if(changePosition)
+	{
+		home(ARROW_SECOND_LINE);
+		displaySpace();
+		home(ARROW_THIRD_LINE);
+		displayArrow();
+	}
+	else
+	{
+		home(ARROW_THIRD_LINE);
+		displaySpace();
+		home(ARROW_SECOND_LINE);
+		displayArrow();
+	}
+}
+void displaySpace(void)
+{
+	LATD = 0x20;
+	data();
+}
+void displayArrow(void)
+{
+	LATD = '>';
+	data();
+}
+void displayParameter(void)
+{
+	unsigned char strings[3][16] = {"     LANGUAGE :", "      ENGLISH", "      FRENSH"}, i = 0, j = 0;
+	while(i < 3)
+	{
+		j = 0;
+		while(strings[i][j] != '\0')
+		{
+			LATD = strings[i][j];
+			data();
+			++j;
+		}
+		if(i == 0)
+			home(0xC0);
+		else if(i == 1)
+			home(0x94);
+		++i;
+	}
+	home(0xC4);
+	displayArrow();
+}
+void clearHome(void)
+{
+	LATD = 0x01;
+	command();
+	T0CON = 0x80;
+	TMR0H = 0xF9;
+	TMR0L = 0x8E;	
+	timerZero();
 }
 void home(unsigned char value)		// THIS FUNCTION IS USED TO CHANGE THE POSITION OF THE CURSOR(SECOND LINE, FIRST LINE)
 {
@@ -136,7 +173,7 @@ void home(unsigned char value)		// THIS FUNCTION IS USED TO CHANGE THE POSITION 
 void displayTime(void)				// THIS IS USED FOR DISPLAYING TIME 
 {
 	signed char m = 2;
-	home(0x84);
+	home(0xC6);
 	while(m >= 0)
 	{
 		LATD = 0x30 + ((bytes[m] & 0xF0) >> 4);		// EXTRACT THE HIGH BYTE TO DISPLAY IT
@@ -154,11 +191,10 @@ void displayTime(void)				// THIS IS USED FOR DISPLAYING TIME
 void displayDate(void)			// THIS FUNCTION DISPLAYS DATE : x/x/20x
 {		
 	unsigned char m = (bytes[5] - 1), n = 0, date = bytes[3], month = bytes[4], year = bytes[6];
-	home(0xC0);
+	home(0x94);
 	if(m > 7)
 		m = 0;
-	home(0xC0);
-	if(!changeLanguage)
+	if(!changePosition)
 	{
 		for(; daysInEnglish[m][n] != '\0'; ++n)
 		{
@@ -194,9 +230,34 @@ void displayDate(void)			// THIS FUNCTION DISPLAYS DATE : x/x/20x
 	data();
 	LATD = 0x30 + (year & 0x0F);
 	data();
+	displaySpace();
+	displaySpace();
+	displaySpace();
+}
+void displayInformation(void)
+{
+	unsigned char inforEnglish[] = "DATE & TIME", i = 0, inforFrensh[] = "TEMPS & DATE";
+	home(0x84);
+	if(!changePosition)
+	{
+		while(inforEnglish[i] != '\0')
+		{
+			LATD = inforEnglish[i++];
+			data();	
+		}
+	}
+	else
+	{
+		while(inforFrensh[i] != '\0')
+		{
+			LATD = inforFrensh[i++];
+			data();	
+		}
+	}
 }
 void displayResult(void)
 {
+	displayInformation();
 	displayTime();
 	displayDate();
 }
