@@ -1,3 +1,20 @@
+/*
+ * THIS IS A SIMPLE SYSTEM DESIGNED TO PROVIDE TIME AND DATE FOR END USERS
+ * IT HAS THE CAPABILITY TO PROVIDE DATE IN FORME : dayName XX/XX/20XX, ALSO THE TIME IS IN FORME OF : XX/XX/XX
+ * ALSO THE SYSTEM SUPPORTS DUAL LANGUAGES(ENGLISH AND FRENSH).
+ * THE HOURSE ARE DISPLAYED AS (24)  
+
+
+ 											* HOW TO WORKS *
+
+ * WE ARE USING SPI PROTOCOL TO COMMUNICATE WITH THE RTC MAX6902 WHICH IS A SIMPLE DEVICE THAT PROVIDES ACCURATE TIME AND DATA
+ * USING INTERRUPT TO HANLD PRECISELY EACH DEVIC(EXTERNAL INTERRUPT FROM INT0, INT1, SPI).
+ * WE ARE USING FINIT STATE MACHINE TO HANDL THE READ/WRITE OPERATIONS TO/FROM THE MAX6902(NOT SWITCH, IF-ELSE)
+ * THE DATE AND TIME ARE DISPLAYED INTO LCD, ONCE THE INT0 IS TRIGGERED, THE SYSTEM DISPLAYS TWO LANGUAGES(ENGLISH AND FRENSH)
+ * AFTER CHOOSING THE LANGUAGE VIA THE INT0(YOU NEED TO CLICK INT0 TO CHANGE THE ARROW POSITION) THE INT1 IS USED TO VALIDE THE LANGUAGE CHOOSEN. 
+*/
+
+
 #include <p18f452.h>
 #include "definitions.h"
 #pragma config WDT = OFF
@@ -8,34 +25,34 @@ void interruptFunction(void)
 	if(INTCONbits.INT0IF)
 	{
 		INTCONbits.INT0IF = 0;
-		if(!choose)	
+		if(!choose)					
 		{
-			PIE1bits.SSPIE = 0;
-			SLAVE_SELECT = 1;
-			INTCON3bits.INT1IE = 1;
-			INTCON3bits.INT1IF = 0;
-			choose = 0x01;
-			clearHome();	
-			displayParameter();
+			PIE1bits.SSPIE = 0;			// DISABLE SPI INTERRUPT
+			SLAVE_SELECT = 1;			// DISABLE COMMUNICATION WITH SLAVE
+			INTCON3bits.INT1IE = 1;		// ENABLE INT0 INTERRUPT
+			INTCON3bits.INT1IF = 0;		
+			choose = 0x01;				// STATE CHANGES
+			clearHome();				// CLEAR LCD ENTIRELY
+			displayParameter();			// DISPLAY THE PARAMETERS INTO LCD
 		}
 		else
 		{
-			changePosition = ~changePosition;
-			changeArrowPosition();
+			changePosition = ~changePosition;		// EACH TIME INT0 IS TRIGGERED BY A BUTTON PUSH THE changePosition VALUE IS COMPLEMENTED
+			changeArrowPosition();					// BASED ON THE changePosition VALUE, THE ARROW IS EITHER POINTING TO FIRST CHOICE OR SECOND CHOICE
 		}
 	}
-	else if(INTCON3bits.INT1IF)
+	else if(INTCON3bits.INT1IF)						// THIS BLOCK IS USED TO VALIDATE USE CHOICE 
 	{
-		INTCON3bits.INT1IF = 0;
-		INTCON3bits.INT1IE = 0;		
-		PIE1bits.SSPIE = 1;
-		clearHome();
-		choose = 0;
-		SLAVE_SELECT = 0;
-		SSPBUF = CLOCK_BURST_READ;
+		INTCON3bits.INT1IF = 0;					
+		INTCON3bits.INT1IE = 0;						// DISABLE THE INT1 (THIS IS ACTIVATED ONLY WHEN THE INT0 IS TRIGERREED)
+		PIE1bits.SSPIE = 1;							// ACTIVATE SPI INTERRUPT
+		clearHome();								// CLEAR HOME 
+		choose = 0;									// RESET THE CHOOSE VARIABLE
+		SLAVE_SELECT = 0;							// PULL THE SLAVE SELECT PIN LOW
+		SSPBUF = CLOCK_BURST_READ;					// INITIATE COMMUNICATION WITH SLAVE THROUGH BURST MODE  
 	}	
-	else if(PIE1bits.SSPIE)
-	{
+	else if(PIE1bits.SSPIE)						// THIS BLOCK IS FOR SPI ISR CODE
+	{	
 		if(PIR1bits.SSPIF)	
 		{
 			PIR1bits.SSPIF = 0;
@@ -95,7 +112,7 @@ void main(void)
 	TRISD = 0x00;				// ALL PINS ARE OUTPUT
 	TRISC = 0x90;				// MAKE SERIAL PINS AS OUTPUT + LCD CONTROL PINS OUTPUT
 	SSPSTAT = 0xC0;				// CONFIGURATION OF SPI PROTOCOL
-	SSPCON1 = 0x20;	
+	SSPCON1 = 0x20;			
 	initialization();			// INITIALIZATION OF LCD(CLEAR HOME, CURSOR OFF, 5*7 PIXEL SIZE)
 	INTCONbits.GIE = 1;			// GLOBAL INTERRUPT ENABLE
 	INTCONbits.PEIE = 1;		// PERIPHERAL INTERRUPT ENABLE		
@@ -104,37 +121,37 @@ void main(void)
 	PIE1bits.SSPIE = 1;			// SPI INTERRUPT BIT
 	PIR1bits.SSPIF = 0;			// INTERRUPT FLAG  
 	SLAVE_SELECT = 0;
-	SSPBUF = CLOCK_BURST_WRITE;
+	SSPBUF = CLOCK_BURST_WRITE;		// INITIATE BURST MODE WRITE TO SLAVE
 	while(TRUE);					// KEEP LOOPING
-}
-void changeArrowPosition(void)
+}		
+void changeArrowPosition(void)		// THE	 FUNCTION ROLE'S TO HANLD ARROW POSITION 
 {
-	if(changePosition)
+	if(changePosition)			
 	{
-		home(ARROW_SECOND_LINE);
-		displaySpace();
+		home(ARROW_SECOND_LINE);		
+		displaySpace();				// CLEAR PREVIOUS ARROW FROM THE SECOND LINE
 		home(ARROW_THIRD_LINE);
-		displayArrow();
+		displayArrow();				// DISPLAY ARROW
 	}
 	else
 	{
 		home(ARROW_THIRD_LINE);
-		displaySpace();
+		displaySpace();				// CLEAR PREVIOUS ARROW FROM THE THIRD LINE
 		home(ARROW_SECOND_LINE);
 		displayArrow();
 	}
 }
 void displaySpace(void)
 {
-	LATD = 0x20;
+	LATD = 0x20;					// 0x20 IS THE ASCII CODE OF A SPACE
 	data();
 }
 void displayArrow(void)
 {
-	LATD = '>';
+	LATD = '>';						// ARROW CHARATCER
 	data();
 }
-void displayParameter(void)
+void displayParameter(void)				// THE FUNCTION ROLE'S TO DISPLAY ALL THE SUPPORTED LANGUAGES BY THE SYSTEM
 {
 	unsigned char strings[3][16] = {"     LANGUAGE :", "      ENGLISH", "      FRENSH"}, i = 0, j = 0;
 	while(i < 3)
@@ -234,7 +251,7 @@ void displayDate(void)			// THIS FUNCTION DISPLAYS DATE : x/x/20x
 	displaySpace();
 	displaySpace();
 }
-void displayInformation(void)
+void displayInformation(void)			// THIS FUNCTION DISPLAYS INFORMATIONS
 {
 	unsigned char inforEnglish[] = "DATE & TIME", i = 0, inforFrensh[] = "TEMPS & DATE";
 	home(0x84);
