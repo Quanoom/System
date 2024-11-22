@@ -9,10 +9,10 @@ The language selection is done by a potentiometer, the validation is done by a p
 - POTENTIOMETER.
 - PUSH BUTTON.
 
-##### Notice:
+#### Notice:
 In order to set the current date & time you have to change the the array (bytes in the definitions.h) to the current date & time.
 
-##### Contributions : 
+#### Contributions : 
 Contributions are welcomed, you can add new features like : 
 - New languages.
 - Calendar.
