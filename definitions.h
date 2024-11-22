@@ -21,6 +21,7 @@
 #define CONTROL_WRITE 0x0F							// CONTROL REGISTER USED TO DEFINED THE WP BIT
 #define SLAVE_SELECT LATCbits.LATC6					// SLAVE SELECT PIN IS CONNECTED TO RC6
 
+				// seconds, minutes, hours, date, months, day, year, control
 volatile unsigned char bytes[] = {0x50, 0x59, 0x23, 0x31, 0x01, 0x05, 0x24, 0x00}, i = 0;	// THIS ARRAY SAVES THE VALUES OF RTC WHEN A READ OCCURS
 unsigned char daysInEnglish[numberDay][stringLength] = {"SUNDAY ", "MONDAY ", "TUESDAY ", 
 "WEDNESDAY ", "THURSDAY ", "FRIDAY ", "SATURDAY "};	// THIS ARRAY CONTAINS ABBREVIATION OF DAYS NAME
