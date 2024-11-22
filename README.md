@@ -11,5 +11,5 @@ The language selection is done by a potentiometer, the validation is done by a p
 
 
 ##### NEW IDEA : 
-New ideas are welcomed.
-check [@show](https://github.com/0xaB26/realTimeClockSystem/blob/main/show.mp4)
+- New ideas are welcomed
+- [@show](https://github.com/0xaB26/realTimeClockSystem/blob/main/show.mp4)
