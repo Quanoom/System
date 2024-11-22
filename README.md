@@ -11,5 +11,9 @@ The language selection is done by a potentiometer, the validation is done by a p
 
 
 ##### NEW IDEA : 
-- New ideas are welcomed
+Contributions are welcomed, you can add new features like : 
+- you can add new languages.
+- calendar.
+- generating alarm.
+##### CHECK : 
 - [@show](https://github.com/0xaB26/realTimeClockSystem/blob/main/show.mp4)
