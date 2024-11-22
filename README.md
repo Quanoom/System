@@ -5,7 +5,7 @@ The language selection is done by a potentiometer, the validation is done by a p
 
 #### COMPONENTS : 
 - PIC18F452
-- REAL TIME CLOCK RTC MAX6902
+- REAL TIME CLOCK RTC MAX6902(spi protocol)
 - POTENTIOMETER.
 - PUSH BUTTON.
 
