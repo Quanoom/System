@@ -10,7 +10,7 @@ The language selection is done by a potentiometer, the validation is done by a p
 - PUSH BUTTON.
 
 
-##### NEW IDEA : 
+##### Notice: 
 Contributions are welcomed, you can add new features like : 
 - you can add new languages.
 - calendar.
