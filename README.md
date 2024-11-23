@@ -1,13 +1,12 @@
 ### DATE & TIME SYSTEM : 
 This system allows users to view the current time and date in either English or French.
 Users can select their preferred language, and the system will display the time and date formatted accordingly. The system uses a real-time clock (RTC).
-The language selection is done by a potentiometer, the validation is done by a push button.
+The language selection is done by a push button, the validation is done by a push button.
 
 #### COMPONENTS : 
 - PIC18F452
 - REAL TIME CLOCK RTC MAX6902(spi protocol)
-- POTENTIOMETER.
-- PUSH BUTTON.
+- PUSH BUTTON * 2.
 
 #### Notice:
 In order to set the current date & time you have to change the the array (bytes in the definitions.h) to the current date & time.
