@@ -306,9 +306,9 @@ void busyFlag(void)
 	TRISDbits.TRISD7 = 1;
 	do
 	{
-		EN_PIN = 0;
-		delay3us();
 		EN_PIN = 1;
+		delay3us();
+		EN_PIN = 0;
 	}while(PORTDbits.RD7 == 1);
 	EN_PIN = 0;
 	TRISDbits.TRISD7 = 0;
