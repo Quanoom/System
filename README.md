@@ -5,11 +5,11 @@ The language selection is done by a push button, the validation is done by a pus
 
 #### COMPONENTS : 
 - PIC18F452
-- REAL TIME CLOCK RTC MAX6902(spi protocol)
+- REAL TIME CLOCK RTC MAX6902(SPI protocol)
 - PUSH BUTTON * 2.
 
 #### Notice:
-In order to set the current date & time you have to change the the array (bytes in the definitions.h) to the current date & time.
+In order to set the current date & time you have to change the array (bytes in the definitions.h) to the current date & time.
 
 #### Contributions : 
 Contributions are welcomed, you can add new features like : 
